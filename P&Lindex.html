@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>柑橘門市月營運損益表</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #e67e22; 
+            --success-color: #27ae60;
+            --danger-color: #c0392b;
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --border-color: #dcdde1;
+            --text-color: #2f3640;
+            --light-text: #7f8c8d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white; padding: 25px 30px; border-radius: 8px; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        header p { font-size: 14px; color: #b2bec3; margin-top: 8px; width: 100%; }
+        
+        .title-input {
+            border: 1px dashed rgba(255,255,255,0.6); background: rgba(255,255,255,0.15);
+            color: white; font-size: 20px; font-weight: 600; text-align: center;
+            border-radius: 4px; padding: 2px 5px; transition: 0.2s;
+        }
+        .title-input::placeholder { color: rgba(255,255,255,0.6); font-weight: normal; }
+        .title-input:focus { outline: none; background: white; color: var(--primary-color); border-color: white; }
+        
+        .inline-label-input {
+            width: 80px; padding: 4px; border: 1px dashed var(--border-color);
+            border-radius: 4px; font-size: 13.5px; font-weight: bold;
+            color: var(--text-color); text-align: center;
+        }
+
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .btn-clear { background-color: #7f8c8d; color: white; }
+        .btn-clear-all { background-color: #e74c3c; color: white; }
+        .btn-excel { background-color: #27ae60; color: white; }
+        .btn-print { background-color: var(--accent-color); color: white; }
+        button:hover { filter: brightness(0.9); }
+
+        /* RWD 儀表板 */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .dash-card {
+            background: var(--card-bg); padding: 20px; border-radius: 8px;
+            text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--primary-color);
+        }
+        .dash-card.revenue { border-left-color: #3498db; }
+        .dash-card.cogs { border-left-color: #e74c3c; }
+        .dash-card.expenses { border-left-color: #f1c40f; }
+        .dash-card.profit { border-left-color: var(--success-color); }
+        .dash-card h3 { font-size: 14px; color: var(--light-text); margin-bottom: 5px; }
+        .dash-card .value { font-size: 22px; font-weight: bold; color: var(--primary-color); }
+
+        .panel { background: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .panel-header { background-color: #eaeded; padding: 15px 20px; font-weight: bold; font-size: 16px; color: var(--primary-color); border-bottom: 1px solid var(--border-color); border-radius: 8px 8px 0 0; }
+        
+        /* RWD 表格 */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
+        th { background-color: #f8f9fa; color: var(--secondary-color); font-weight: 600; padding: 12px 20px; font-size: 14px; border-bottom: 2px solid var(--border-color); }
+        td { padding: 10px 20px; border-bottom: 1px solid #f1f2f6; vertical-align: middle; font-size: 14px; }
+        tr:hover td { background-color: #fdfdfd; }
+        .sub-category { background-color: #fcfcfc; font-weight: bold; color: #57606f; }
+        .sub-category td { padding-left: 30px; font-size: 13.5px; }
+        .subtotal-row { background-color: #fafbfc; border-top: 1px dashed var(--border-color); }
+        .total-row { background-color: #f1f2f6; font-weight: bold; border-top: 1px solid var(--border-color); border-bottom: 2px solid var(--border-color); color: var(--primary-color); }
+
+        .input-group { position: relative; width: 100%; max-width: 200px; }
+        .input-group span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a4b0be; font-size: 13px; }
+        input.data-input {
+            width: 100%; padding: 8px 10px 8px 25px; border: 1px solid var(--border-color);
+            border-radius: 4px; font-size: 14px; text-align: right; color: var(--text-color);
+        }
+        input.data-input:focus { outline: none; border-color: var(--accent-color); background-color: #fffdfb; }
+        input.data-input.input-error { border-color: var(--danger-color); background-color: #fdedec; } /* 防呆錯色 */
+
+        .pct-cell { text-align: right; font-weight: 500; color: #636e72; width: 100px; }
+        .note-cell { color: var(--light-text); font-size: 12px; }
+        
+        .chart-container { display: flex; align-items: center; justify-content: center; padding: 30px; gap: 50px; background: #fff; flex-wrap: wrap; }
+        .pie-chart { width: 300px; height: 300px; position: relative;}
+        .chart-legend { display: flex; flex-direction: column; gap: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+        .legend-color { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
+        .loss-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--danger-color); font-weight: bold; font-size: 24px; text-shadow: 0 0 5px white; pointer-events: none;}
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 18px; }
+            .title-input { font-size: 16px; }
+            .chart-container { flex-direction: column; gap: 20px; }
+            .pie-chart { width: 250px; height: 250px; }
+        }
+
+        @media print {
+            @page { size: A4 portrait; margin: 8mm; }
+            body { background-color: white; padding: 0; margin: 0; font-size: 11px; }
+            .btn-group, .input-group span { display: none; }
+            .panel { box-shadow: none; border: 1px solid #444; margin-bottom: 8px; page-break-inside: avoid; }
+            .panel-header { background-color: #f2f2f2; padding: 5px 10px; font-size: 12px; border-bottom: 1px solid #444; }
+            header { background: #fff !important; color: #000 !important; border: 2px solid #000; padding: 10px; margin-bottom: 10px; display: block; text-align: center;}
+            header h1 { justify-content: center; margin: 0;}
+            .title-input { border: none; background: transparent; color: #000; border-bottom: 1px solid #000; border-radius: 0; padding: 0;}
+            .title-input::placeholder { color: transparent; }
+            .inline-label-input { border: none; background: transparent; border-bottom: 1px solid #000; border-radius: 0; padding: 0;}
+            .inline-label-input::placeholder { color: transparent; }
+            th, td { padding: 3px 6px !important; font-size: 11px !important; border-bottom: 1px solid #ddd; }
+            .dashboard { margin-bottom: 10px; gap: 5px; }
+            .dash-card { padding: 8px; border: 1px solid #ddd; }
+            .dash-card .value { font-size: 16px; color: #000 !important; }
+            input.data-input { border: none; background: transparent; text-align: right; padding: 0; font-size: 11px; width: 80px; }
+            .note-cell { font-size: 9px; max-width: 150px; }
+            .pct-cell { width: 60px; font-size: 10px; }
+            #print-zone-2 { page-break-before: always; }
+            .chart-container { padding: 10px; gap: 20px; }
+            .pie-chart { width: 220px; height: 220px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="print-zone-1">
+        <header>
+            <div style="flex-grow: 1;">
+                <h1>🍊 柑橘集團 
+                    <input type="text" id="header_shop" class="title-input persist-val" style="width: 120px;" placeholder="請填寫店名"> 店 
+                    <input type="text" id="header_year" class="title-input persist-val" style="width: 70px;" placeholder="年份"> 年 
+                    <input type="text" id="header_month" class="title-input persist-val" style="width: 50px;" placeholder="月"> 月營運損益表
+                </h1>
+                <p>內部機密資料，請務必妥善保管</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn-clear" onclick="clearDataOnly()">清除數據</button>
+                <button class="btn-clear-all" onclick="clearAll()">清除全部</button>
+                <button class="btn-excel" onclick="exportToExcelJS()">匯出 Excel</button>
+                <button class="btn-print" onclick="window.print()">列印 / PDF</button>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="dash-card revenue">
+                <h3>總營業收入</h3>
+                <div class="value" id="dash-revenue">$ 0</div>
+            </div>
+            <div class="dash-card cogs">
+                <h3>總營業成本 (COGS)</h3>
+                <div class="value" id="dash-cogs">$ 0</div>
+                <div class="percentage" id="dash-cogs-pct">0.00%</div>
+            </div>
+            <div class="dash-card expenses">
+                <h3>總營業費用</h3>
+                <div class="value" id="dash-expenses">$ 0</div>
+                <div class="percentage" id="dash-expenses-pct">0.00%</div>
+            </div>
+            <div class="dash-card profit">
+                <h3>門市稅前淨利</h3>
+                <div class="value" id="dash-profit">$ 0</div>
+                <div class="percentage" id="dash-profit-pct">0.00%</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">一、 營業收入 (Revenue)</div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width: 30%;">科目名稱</th><th style="width: 25%;">金額 (NTD)</th><th style="width: 15%; text-align: right;">佔比 (%)</th><th style="width: 30%;">備註說明</th></tr></thead>
+                    <tbody id="tbody-revenue"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">二、 營業成本 (COGS)</div>
+            <div class="table-responsive">
+                <table>
+                    <tbody id="tbody-cogs"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-zone-2">
+        <div class="panel">
+            <div class="panel-header">三、 營業費用 (Operating Expenses)</div>
+            <div class="table-responsive">
+                <table>
+                    <tbody id="tbody-expenses"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" style="border: 2px solid var(--success-color);">
+            <div class="panel-header" style="background-color: #e8f8f5; color: var(--success-color);">四、 最終營運淨利</div>
+            <div class="table-responsive">
+                <table>
+                    <tbody>
+                        <tr style="font-weight: bold;">
+                            <td style="width: 30%; padding: 20px;">門市稅前利潤</td>
+                            <td style="width: 25%; padding: 20px; font-size: 20px;" id="final_net_profit">$ 0</td>
+                            <td style="width: 15%; padding: 20px; text-align: right; font-size: 20px;" id="final_net_profit_pct">0.00%</td>
+                            <td style="width: 30%; padding: 20px; color: var(--light-text); font-weight: normal; font-size: 13px;">總收入 － 總成本 － 總費用</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel" style="page-break-inside: avoid;">
+            <div class="panel-header">五、 營運結構分析 (Visual Analysis)</div>
+            <div class="chart-container">
+                <div class="pie-chart" id="svg-pie-container"></div>
+                <div class="chart-legend" id="revenue-legend"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ⚙️ 系統常數設定與資料結構 Schema (動態生成)
+    // ==========================================
+    const CONFIG = {
+        // 階梯式權利金設定，支援無限多階層。 limit 為該階層上限 (Infinity 代表無上限)
+        royaltyTiers: [
+            { limit: 1000000, rate: 0.04 },
+            { limit: Infinity, rate: 0.02 } 
+        ],
+        colors: { comp: '#e74c3c', ext: '#e67e22', exp: '#f1c40f', royalty: '#9b59b6', profit: '#27ae60', loss: '#c0392b' },
+        cogsHealthRange: "36% - 42%"
+    };
+
+    const SCHEMA = {
+        revenue: [
+            { id: "rev_indoor", name: "內用收入", note: "門市現場內用消費總額" },
+            { id: "rev_takeout", name: "外帶收入", note: "門市現場顧客自取總額" },
+            { id: "rev_delivery", name: "外送平台收入", note: "輸入未扣抽成前的營業總額" }
+        ],
+        cogsComp: [
+            { id: "cogs_w1", name: "第一週進貨", note: "請填寫該週訂貨總金額" },
+            { id: "cogs_w2", name: "第二週進貨", note: "請填寫該週訂貨總金額" },
+            { id: "cogs_w3", name: "第三週進貨", note: "請填寫該週訂貨總金額" },
+            { id: "cogs_w4", name: "第四週進貨", note: "請填寫該週訂貨總金額" },
+            { id: "cogs_w5", name: "第五週進貨", note: "請填寫該週訂貨總金額" }
+        ],
+        cogsExt: [
+            { id: "cogs_ext_1", name: "1. 麵商金額", note: "" },
+            { id: "cogs_ext_2", name: "2. 蔬菜/水果金額", note: "" },
+            { id: "cogs_ext_3", name: "3. 醬料/調味品金額", note: "" },
+            { id: "cogs_ext_4", name: "4. 南北雜貨金額", note: "" },
+            { id: "cogs_ext_5", name: "5. 油品金額", note: "" },
+            { id: "cogs_ext_6", name: "6. 酒品金額", note: "" },
+            { id: "cogs_ext_7", name: "7. 飲品/糖漿金額", note: "" },
+            { id: "cogs_ext_8", name: "8. 包材/耗材/用品金額", note: "" },
+            { id: "cogs_ext_9", isCustom: true, customId: "custom_ext_name", defaultName: "自訂項目", note: "" }
+        ],
+        expenses: [
+            { id: "exp_salary", name: "薪資與勞健保", note: "正職與PT總和" },
+            { id: "exp_benefits", name: "員工福利與供餐", note: "供餐成本與獎金" },
+            { id: "exp_rent", name: "店面租金", note: "每月固定租金" },
+            { id: "exp_water", name: "水電費", note: "水電帳單" },
+            { id: "exp_gas", name: "瓦斯費", note: "熬湯能源消耗" },
+            { id: "exp_maintain", name: "設備維修保養", note: "機台修繕" },
+            { id: "exp_clean", name: "清潔與消耗品", note: "洗碗精、紙巾等" },
+            { id: "exp_pos", name: "POS與點餐機租金", note: "系統月租費" },
+            { id: "exp_dish", name: "洗碗機租賃費用", note: "固定租賃契約" },
+            { id: "exp_delivery", name: "外送平台手續費", note: "依據平台帳單扣款" }
+        ],
+        expensesMarketing: [
+            { id: "exp_market", name: "門市行銷宣傳費", note: "在地廣告與活動" },
+            { id: "exp_insure", name: "保險費", note: "公共意外責任險等" }
+        ]
+    };
+
+    // ==========================================
+    // 渲染與生命週期管理
+    // ==========================================
+    function renderTables() {
+        const renderRow = (item, indent = "") => `
+            <tr>
+                <td style="width:30%;">${indent}${item.isCustom ? `9. <input type="text" id="${item.customId}" class="inline-label-input persist-val" placeholder="${item.defaultName}"> 金額` : item.name}</td>
+                <td style="width:25%;"><div class="input-group"><span>$</span><input type="text" inputmode="numeric" class="data-input persist-val" id="${item.id}" placeholder="0"></div></td>
+                <td style="width:15%;" class="pct-cell" id="${item.id}_pct">0.00%</td>
+                <td style="width:30%;" class="note-cell">${item.note}</td>
+            </tr>`;
+
+        // 渲染收入
+        let revHtml = SCHEMA.revenue.map(item => renderRow(item)).join('');
+        revHtml += `<tr class="total-row"><td>總營業收入</td><td>$ <span id="total_revenue">0</span></td><td class="pct-cell">100.00%</td><td>營收計算基準值</td></tr>`;
+        document.getElementById('tbody-revenue').innerHTML = revHtml;
+
+        // 渲染成本
+        let cogsHtml = `<tr class="sub-category"><td colspan="4">【公司供應原物料】</td></tr>`;
+        cogsHtml += SCHEMA.cogsComp.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
+        cogsHtml += `<tr class="subtotal-row"><td style="text-align:right;">↳ 公司物料小計</td><td>$ <span id="subtotal_company">0</span></td><td class="pct-cell" id="subtotal_company_pct">0.00%</td><td class="note-cell"></td></tr>`;
+        
+        cogsHtml += `<tr class="sub-category"><td colspan="4">【外部廠商採購】</td></tr>`;
+        cogsHtml += SCHEMA.cogsExt.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
+        cogsHtml += `<tr class="subtotal-row"><td style="text-align:right;">↳ 外部採購小計</td><td>$ <span id="subtotal_ext">0</span></td><td class="pct-cell" id="subtotal_ext_pct">0.00%</td><td class="note-cell"></td></tr>`;
+        cogsHtml += `<tr class="total-row"><td>總營業成本</td><td>$ <span id="total_cogs">0</span></td><td class="pct-cell" id="total_cogs_pct">0.00%</td><td class="note-cell">健康值約 ${CONFIG.cogsHealthRange}</td></tr>`;
+        document.getElementById('tbody-cogs').innerHTML = cogsHtml;
+
+        // 渲染費用
+        let expHtml = `<tr class="sub-category"><td colspan="4">【人事與店面營運】</td></tr>`;
+        expHtml += SCHEMA.expenses.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
+        
+        expHtml += `<tr class="sub-category"><td colspan="4">【行銷與總部費用】</td></tr>`;
+        expHtml += `
+            <tr style="background-color: #fff9f2;">
+                <td style="color: var(--accent-color); font-weight: bold;">&nbsp;&nbsp;&nbsp;&nbsp;總部權利金 (自動計算)</td>
+                <td style="font-weight: bold; padding-left: 10px;">$ <span id="exp_royalty">0</span></td>
+                <td class="pct-cell" id="exp_royalty_pct" style="color: var(--accent-color); font-weight: bold;">0.00%</td>
+                <td class="note-cell" style="color: var(--accent-color);">依總部階梯規則連動</td>
+            </tr>`;
+        expHtml += SCHEMA.expensesMarketing.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
+        expHtml += `<tr class="total-row"><td>總營業費用</td><td>$ <span id="total_expenses">0</span></td><td class="pct-cell" id="total_expenses_pct">0.00%</td><td class="note-cell">含權利金總和</td></tr>`;
+        document.getElementById('tbody-expenses').innerHTML = expHtml;
+    }
+
+    // ==========================================
+    // 核心計算與邏輯
+    // ==========================================
+    function getVal(id) {
+        var el = document.getElementById(id);
+        if (!el || !el.value) return 0;
+        var pureNum = parseFloat(el.value.replace(/,/g, ''));
+        // 防呆提示：如果有輸入但不合規(文字等)，加上錯誤邊框
+        if (isNaN(pureNum)) {
+            el.classList.add('input-error');
+            return 0;
+        } else {
+            el.classList.remove('input-error');
+            return Math.max(0, pureNum); // 擋負數
+        }
+    }
+
+    function formatNumber(num) { return Number(num).toLocaleString('en-US', { maximumFractionDigits: 0 }); }
+    function updatePct(id, itemVal, totalRev) {
+        var el = document.getElementById(id);
+        if (el) el.innerText = totalRev > 0 ? ((itemVal / totalRev) * 100).toFixed(2) + "%" : "0.00%";
+    }
+
+    // 動態計算階梯式權利金
+    function calculateRoyalty(totalRev) {
+        let royalty = 0;
+        let remaining = totalRev;
+        let previousLimit = 0;
+        for (let tier of CONFIG.royaltyTiers) {
+            let tierBand = tier.limit - previousLimit;
+            let amountInTier = Math.min(remaining, tierBand);
+            if (amountInTier > 0) {
+                royalty += amountInTier * tier.rate;
+                remaining -= amountInTier;
+            }
+            previousLimit = tier.limit;
+            if (remaining <= 0) break;
+        }
+        return royalty;
+    }
+
+    function calculate() {
+        try {
+            // 營收
+            var totalRev = SCHEMA.revenue.reduce((sum, item) => sum + getVal(item.id), 0);
+            SCHEMA.revenue.forEach(item => updatePct(item.id + '_pct', getVal(item.id), totalRev));
+            document.getElementById('total_revenue').innerText = formatNumber(totalRev);
+            document.getElementById('dash-revenue').innerText = "$ " + formatNumber(totalRev);
+
+            // 成本
+            var compTotal = SCHEMA.cogsComp.reduce((sum, item) => { updatePct(item.id + '_pct', getVal(item.id), totalRev); return sum + getVal(item.id); }, 0);
+            document.getElementById('subtotal_company').innerText = formatNumber(compTotal);
+            updatePct('subtotal_company_pct', compTotal, totalRev);
+
+            var extTotal = SCHEMA.cogsExt.reduce((sum, item) => { updatePct(item.id + '_pct', getVal(item.id), totalRev); return sum + getVal(item.id); }, 0);
+            document.getElementById('subtotal_ext').innerText = formatNumber(extTotal);
+            updatePct('subtotal_ext_pct', extTotal, totalRev);
+
+            var totalCogs = compTotal + extTotal;
+            document.getElementById('total_cogs').innerText = formatNumber(totalCogs);
+            document.getElementById('dash-cogs').innerText = "$ " + formatNumber(totalCogs);
+            updatePct('total_cogs_pct', totalCogs, totalRev);
+            updatePct('dash-cogs-pct', totalCogs, totalRev);
+
+            // 費用與權利金
+            var royalty = calculateRoyalty(totalRev);
+            document.getElementById('exp_royalty').innerText = formatNumber(royalty);
+            updatePct('exp_royalty_pct', royalty, totalRev);
+
+            let allExpItems = [...SCHEMA.expenses, ...SCHEMA.expensesMarketing];
+            var pureExpTotal = allExpItems.reduce((sum, item) => { updatePct(item.id + '_pct', getVal(item.id), totalRev); return sum + getVal(item.id); }, 0);
+            var totalExp = pureExpTotal + royalty;
+            
+            document.getElementById('total_expenses').innerText = formatNumber(totalExp);
+            document.getElementById('dash-expenses').innerText = "$ " + formatNumber(totalExp);
+            updatePct('total_expenses_pct', totalExp, totalRev);
+            updatePct('dash-expenses-pct', totalExp, totalRev);
+
+            // 淨利
+            var netProfit = totalRev - totalCogs - totalExp;
+            document.getElementById('final_net_profit').innerText = "$ " + formatNumber(netProfit);
+            document.getElementById('dash-profit').innerText = "$ " + formatNumber(netProfit);
+            updatePct('final_net_profit_pct', netProfit, totalRev);
+            updatePct('dash-profit-pct', netProfit, totalRev);
+
+            var pColor = netProfit >= 0 ? CONFIG.colors.profit : CONFIG.colors.loss;
+            document.getElementById('final_net_profit').style.color = pColor;
+            document.getElementById('dash-profit').style.color = pColor;
+
+            drawSvgPieChart(totalRev, compTotal, extTotal, pureExpTotal, royalty, netProfit);
+            saveToLocal(); // 自動暫存
+        } catch (e) { console.error(e); }
+    }
+
+    // SVG 圓餅圖繪製 (包含負利潤警示)
+    function drawSvgPieChart(totalRev, comp, ext, pureExp, royalty, netProfit) {
+        var container = document.getElementById('svg-pie-container');
+        var legend = document.getElementById('revenue-legend');
+        
+        if (totalRev <= 0) {
+            container.innerHTML = '<svg viewBox="-115 -115 230 230" style="width:100%;height:100%;"><circle cx="0" cy="0" r="100" fill="#eee"></circle></svg>';
+            legend.innerHTML = '<div class="legend-item"><span class="legend-color" style="background:#eee;"></span>暫無營運數據</div>';
+            return;
+        }
+
+        var profitVal = netProfit > 0 ? netProfit : 0;
+        var totalSegments = comp + ext + pureExp + royalty + profitVal;
+        if(totalSegments <= 0) totalSegments = 1;
+
+        var slices = [
+            { name: '公司物料', val: comp, color: CONFIG.colors.comp },
+            { name: '外部採購', val: ext, color: CONFIG.colors.ext },
+            { name: '營運費用', val: pureExp, color: CONFIG.colors.exp },
+            { name: '權利金', val: royalty, color: CONFIG.colors.royalty },
+            { name: '淨利', val: profitVal, color: CONFIG.colors.profit }
+        ];
+
+        let svgHtml = '<svg viewBox="-115 -115 230 230" style="width:100%; height:100%; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.1));">';
+        let cumulativePercent = 0;
+
+        slices.forEach(slice => {
+            if (slice.val <= 0) return;
+            let pct = slice.val / totalSegments;
+            let start = cumulativePercent;
+            let end = cumulativePercent + pct;
+            
+            let x1 = Math.cos(2 * Math.PI * start - Math.PI / 2) * 100;
+            let y1 = Math.sin(2 * Math.PI * start - Math.PI / 2) * 100;
+            let x2 = Math.cos(2 * Math.PI * end - Math.PI / 2) * 100;
+            let y2 = Math.sin(2 * Math.PI * end - Math.PI / 2) * 100;
+            
+            if (pct > 0.999) {
+                svgHtml += `<circle cx="0" cy="0" r="100" fill="${slice.color}"></circle>`;
+            } else {
+                let largeArc = pct > 0.5 ? 1 : 0;
+                svgHtml += `<path d="M ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2} L 0 0" fill="${slice.color}"></path>`;
+            }
+
+            if (pct >= 0.05) {
+                let textAngle = start + pct / 2;
+                let tx = Math.cos(2 * Math.PI * textAngle - Math.PI / 2) * 60;
+                let ty = Math.sin(2 * Math.PI * textAngle - Math.PI / 2) * 60;
+                let pctText = (pct * 100).toFixed(1) + '%';
+                
+                if (pct < 0.12) {
+                    svgHtml += `<text x="${tx}" y="${ty}" fill="#fff" font-size="10" font-weight="bold" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">${pctText}</text>`;
+                } else {
+                    svgHtml += `<text x="${tx}" y="${ty}" fill="#fff" font-size="10" font-weight="bold" font-family="sans-serif" text-anchor="middle" dominant-baseline="central"><tspan x="${tx}" dy="-0.6em">${slice.name}</tspan><tspan x="${tx}" dy="1.4em">${pctText}</tspan></text>`;
+                }
+            }
+            cumulativePercent += pct;
+        });
+        
+        // 虧損提示字樣
+        if (netProfit < 0) {
+            svgHtml += `<text x="0" y="0" fill="${CONFIG.colors.loss}" font-size="16" font-weight="bold" font-family="sans-serif" text-anchor="middle" dominant-baseline="central" style="text-shadow: 0px 0px 4px white;">當月虧損</text>`;
+        }
+        
+        svgHtml += '</svg>';
+        container.innerHTML = svgHtml;
+
+        legend.innerHTML = `
+            <div class="legend-item"><span class="legend-color" style="background:${CONFIG.colors.comp};"></span>公司原物料進貨: ${(comp/totalSegments*100).toFixed(1)}% ($${formatNumber(comp)})</div>
+            <div class="legend-item"><span class="legend-color" style="background:${CONFIG.colors.ext};"></span>外部廠商採購成本: ${(ext/totalSegments*100).toFixed(1)}% ($${formatNumber(ext)})</div>
+            <div class="legend-item"><span class="legend-color" style="background:${CONFIG.colors.exp};"></span>人事薪資與門市營運費: ${(pureExp/totalSegments*100).toFixed(1)}% ($${formatNumber(pureExp)})</div>
+            <div class="legend-item"><span class="legend-color" style="background:${CONFIG.colors.royalty};"></span>總部商標權利金: ${(royalty/totalSegments*100).toFixed(1)}% ($${formatNumber(royalty)})</div>
+            ${netProfit >= 0 ? `<div class="legend-item"><span class="legend-color" style="background:${CONFIG.colors.profit};"></span>門市稅前純利: ${(profitVal/totalSegments*100).toFixed(1)}% ($${formatNumber(profitVal)})</div>` : `<div class="legend-item" style="color:${CONFIG.colors.loss}; font-weight:bold;"><span class="legend-color" style="background:${CONFIG.colors.loss};"></span>門市營運虧損: $${formatNumber(Math.abs(netProfit))}</div>`}
+        `;
+    }
+
+    // ==========================================
+    // SheetJS Excel 匯出功能
+    // ==========================================
+    function exportToExcelJS() {
+        var totalRev = SCHEMA.revenue.reduce((sum, item) => sum + getVal(item.id), 0);
+        var getRawPct = (val) => totalRev > 0 ? (val / totalRev) : 0;
+
+        var sName = document.getElementById('header_shop').value || "___";
+        var sYear = document.getElementById('header_year').value || "___";
+        var sMonth = document.getElementById('header_month').value || "___";
+        var fullTitle = "柑橘集團 " + sName + " 店 " + sYear + " 年 " + sMonth + " 月營運損益表";
+
+        let aoa = [
+            [fullTitle], ["導出時間", new Date().toLocaleString('zh-TW')], [],
+            ["【營運總覽大盤】"], ["指標", "總金額 (NTD)", "佔營收比"]
+        ];
+        
+        let cogsAmt = parseFloat(document.getElementById('total_cogs').innerText.replace(/,/g,''));
+        let expAmt = parseFloat(document.getElementById('total_expenses').innerText.replace(/,/g,''));
+        let profitAmt = totalRev - cogsAmt - expAmt;
+
+        aoa.push(["總營業收入", totalRev, 1]);
+        aoa.push(["總營業成本 (COGS)", cogsAmt, getRawPct(cogsAmt)]);
+        aoa.push(["總營業費用", expAmt, getRawPct(expAmt)]);
+        aoa.push(["門市稅前淨利", profitAmt, getRawPct(profitAmt)]);
+        aoa.push([]);
+
+        // 遞迴塞入細項
+        const pushSection = (title, schemaArray) => {
+            aoa.push([title]);
+            aoa.push(["科目", "金額 (NTD)", "佔比"]);
+            schemaArray.forEach(item => {
+                let name = item.isCustom ? "9. " + (document.getElementById(item.customId).value || item.defaultName) + " 金額" : item.name;
+                aoa.push([name, getVal(item.id), getRawPct(getVal(item.id))]);
+            });
+            aoa.push([]);
+        };
+
+        pushSection("【一、 營業收入細項】", SCHEMA.revenue);
+        pushSection("【二、 公司原物料細項】", SCHEMA.cogsComp);
+        pushSection("【二、 外部採購細項】", SCHEMA.cogsExt);
+        
+        aoa.push(["【三、 營業費用細項】"]);
+        aoa.push(["科目", "金額 (NTD)", "佔比"]);
+        SCHEMA.expenses.forEach(item => aoa.push([item.name, getVal(item.id), getRawPct(getVal(item.id))]));
+        let rAmt = calculateRoyalty(totalRev);
+        aoa.push(["總部商標權利金 (自動)", rAmt, getRawPct(rAmt)]);
+        SCHEMA.expensesMarketing.forEach(item => aoa.push([item.name, getVal(item.id), getRawPct(getVal(item.id))]));
+        aoa.push([]);
+
+        // 轉換為工作表
+        var ws = XLSX.utils.aoa_to_sheet(aoa);
+        
+        // 設定小數點格式為百分比 (例如 0.04 顯示為 4.00%)
+        Object.keys(ws).forEach(key => {
+            if(key.startsWith('C') && typeof ws[key].v === 'number') ws[key].z = "0.00%";
+        });
+
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "營運損益表");
+        XLSX.writeFile(wb, sName + "店_" + sYear + "年" + sMonth + "月營運損益表.xlsx");
+    }
+
+    // ==========================================
+    // LocalStorage 與清理機制
+    // ==========================================
+    function saveToLocal() {
+        let data = {};
+        document.querySelectorAll('.persist-val').forEach(input => {
+            data[input.id] = input.value;
+        });
+        localStorage.setItem('citrus_pl_data', JSON.stringify(data));
+    }
+
+    function loadFromLocal() {
+        let data = JSON.parse(localStorage.getItem('citrus_pl_data') || '{}');
+        for (let key in data) {
+            let el = document.getElementById(key);
+            if(el) el.value = data[key];
+        }
+    }
+
+    function clearDataOnly() {
+        document.querySelectorAll('.data-input').forEach(input => input.value = '');
+        calculate();
+    }
+
+    function clearAll() {
+        document.querySelectorAll('.persist-val').forEach(input => input.value = '');
+        calculate();
+    }
+
+    // 初始化
+    window.onload = function() {
+        renderTables();
+        loadFromLocal();
+        
+        document.querySelectorAll('.persist-val').forEach(input => {
+            input.addEventListener('input', calculate);
+            if(input.classList.contains('data-input')) {
+                input.addEventListener('focus', function() { this.value = this.value.replace(/,/g, ''); });
+                input.addEventListener('blur', function() { 
+                    let pureNum = parseFloat(this.value.replace(/,/g, ''));
+                    if(!isNaN(pureNum)) this.value = pureNum.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                });
+            }
+        });
+        calculate();
+    };
+</script>
+
+</body>
+</html>
