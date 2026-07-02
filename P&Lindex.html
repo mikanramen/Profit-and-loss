@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>柑橘門市月營運損益表</title>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -52,6 +53,8 @@
         .btn-clear-all { background-color: #e74c3c; color: white; }
         .btn-excel { background-color: #27ae60; color: white; }
         .btn-print { background-color: var(--accent-color); color: white; }
+        .btn-share { background-color: #3498db; color: white; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         button:hover { filter: brightness(0.9); }
 
         /* RWD 儀表板 */
@@ -78,6 +81,8 @@
         tr:hover td { background-color: #fdfdfd; }
         .sub-category { background-color: #fcfcfc; font-weight: bold; color: #57606f; }
         .sub-category td { padding-left: 30px; font-size: 13.5px; }
+        .sub-category-lvl2 { background-color: #ffffff; font-weight: 600; color: #7f8c8d; }
+        .sub-category-lvl2 td { padding-left: 55px; font-size: 13px; border-bottom: 1px dashed #f1f2f6; }
         .subtotal-row { background-color: #fafbfc; border-top: 1px dashed var(--border-color); }
         .total-row { background-color: #f1f2f6; font-weight: bold; border-top: 1px solid var(--border-color); border-bottom: 2px solid var(--border-color); color: var(--primary-color); }
 
@@ -150,6 +155,7 @@
                 <button class="btn-clear-all" onclick="clearAll()">清除全部</button>
                 <button class="btn-excel" onclick="exportToExcelJS()">匯出 Excel</button>
                 <button class="btn-print" onclick="window.print()">列印 / PDF</button>
+                <button class="btn-share" id="btn-share" onclick="shareAsImage()">📤 分享/儲存截圖</button>
             </div>
         </header>
 
@@ -242,7 +248,11 @@
             { limit: Infinity, rate: 0.02 } 
         ],
         colors: { comp: '#e74c3c', ext: '#e67e22', exp: '#f1c40f', royalty: '#9b59b6', profit: '#27ae60', loss: '#c0392b' },
-        cogsHealthRange: "36% - 42%"
+        cogsHealthRange: "36% - 42%",
+
+        // ⬇️⬇️⬇️ 背景自動同步設定，請依照教學文件填入以下網址 ⬇️⬇️⬇️
+        gasWebhookUrl: "https://script.google.com/macros/s/AKfycbyzm18aeWf_ZHSt6LSLBNP8RB0bJPPblGA0jEuxbH0FVeflpzQY7-0yh-qQQDHj4rAx/exec"
+        // ⬆️⬆️⬆️ 這裡只放同步網址，實際收件信箱設定在 Google Apps Script 伺服器端，不會出現在此檔案中 ⬆️⬆️⬆️
     };
 
     const SCHEMA = {
@@ -259,15 +269,41 @@
             { id: "cogs_w5", name: "第五週進貨", note: "請填寫該週訂貨總金額" }
         ],
         cogsExt: [
-            { id: "cogs_ext_1", name: "1. 麵商金額", note: "" },
-            { id: "cogs_ext_2", name: "2. 蔬菜/水果金額", note: "" },
-            { id: "cogs_ext_3", name: "3. 醬料/調味品金額", note: "" },
-            { id: "cogs_ext_4", name: "4. 南北雜貨金額", note: "" },
-            { id: "cogs_ext_5", name: "5. 油品金額", note: "" },
-            { id: "cogs_ext_6", name: "6. 酒品金額", note: "" },
-            { id: "cogs_ext_7", name: "7. 飲品/糖漿金額", note: "" },
-            { id: "cogs_ext_8", name: "8. 包材/耗材/用品金額", note: "" },
-            { id: "cogs_ext_9", isCustom: true, customId: "custom_ext_name", defaultName: "自訂項目", note: "" }
+            { type: 'cat', name: '【外部廠商採購】' },
+            { id: 'cogs_ext_1', name: '1. 麵商金額', type: 'sub', note: '' },
+            { type: 'cat', name: '2. 蔬菜水果類' },
+            { id: 'cogs_ext_2_1', name: '綠葱', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_2', name: '白洋葱', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_3', name: '小黃瓜', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_4', name: '紫洋蔥', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_5', name: '柳丁', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_6', name: '柑橘', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_7', name: '檸檬', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_8', name: '金桔', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_9', name: '冷凍莓果', type: 'sub', note: '' },
+            { id: 'cogs_ext_2_10', name: '其他蔬果', type: 'sub', note: '' },
+            { type: 'cat', name: '3. 醬料調味品' },
+            { id: 'cogs_ext_3_1', name: '鹽味基底醬', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_2', name: 'YL醬油', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_3', name: '龜甲萬甘醇醬油', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_4', name: '台糖砂糖', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_5', name: '桂冠美乃滋', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_6', name: '紅胡椒', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_7', name: '鰹魚露', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_8', name: 'AJI味素', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_9', name: '胡椒鹽', type: 'sub', note: '' },
+            { id: 'cogs_ext_3_10', name: '其他調味料', type: 'sub', note: '' },
+            { type: 'cat', name: '4. 南北雜貨類' },
+            { id: 'cogs_ext_4_1', name: '海苔細絲', type: 'sub', note: '' },
+            { id: 'cogs_ext_4_2', name: '藪北園竹海苔', type: 'sub', note: '' },
+            { id: 'cogs_ext_4_3', name: '白米', type: 'sub', note: '' },
+            { id: 'cogs_ext_4_4', name: '其他南北雜貨', type: 'sub', note: '' },
+            { id: 'cogs_ext_5', name: '5. 油品金額', type: 'sub', note: '' },
+            { id: 'cogs_ext_6', name: '6. 酒品金額', type: 'sub', note: '' },
+            { id: 'cogs_ext_7', name: '7. 飲品/糖漿金額', type: 'sub', note: '' },
+            { id: 'cogs_ext_8', name: '8. 包材/耗材/用品金額', type: 'sub', note: '' },
+            { id: 'cogs_ext_9', name: '9. 海鮮類金額', type: 'sub', note: '' },
+            { id: 'cogs_ext_10', name: '10. 自訂項目', type: 'sub', note: '' }
         ],
         expenses: [
             { id: "exp_salary", name: "薪資與勞健保", note: "正職與PT總和" },
@@ -277,6 +313,7 @@
             { id: "exp_gas", name: "瓦斯費", note: "熬湯能源消耗" },
             { id: "exp_maintain", name: "設備維修保養", note: "機台修繕" },
             { id: "exp_clean", name: "清潔與消耗品", note: "洗碗精、紙巾等" },
+            { id: "exp_disinfect", name: "委外消毒費用", note: "定期消毒支出" },
             { id: "exp_pos", name: "POS與點餐機租金", note: "系統月租費" },
             { id: "exp_dish", name: "洗碗機租賃費用", note: "固定租賃契約" },
             { id: "exp_delivery", name: "外送平台手續費", note: "依據平台帳單扣款" }
@@ -309,8 +346,17 @@
         cogsHtml += SCHEMA.cogsComp.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
         cogsHtml += `<tr class="subtotal-row"><td style="text-align:right;">↳ 公司物料小計</td><td>$ <span id="subtotal_company">0</span></td><td class="pct-cell" id="subtotal_company_pct">0.00%</td><td class="note-cell"></td></tr>`;
         
-        cogsHtml += `<tr class="sub-category"><td colspan="4">【外部廠商採購】</td></tr>`;
-        cogsHtml += SCHEMA.cogsExt.map(item => renderRow(item, "&nbsp;&nbsp;&nbsp;&nbsp;")).join('');
+        cogsHtml += SCHEMA.cogsExt.map(item => {
+            if (item.type === 'cat') {
+                // 頂層分類【外部廠商採購】用 sub-category 樣式；巢狀子分類 (如 2. 蔬菜水果類) 用 lvl2 樣式，多縮排一層
+                const isTopLevel = item.name.indexOf('【') === 0;
+                return `<tr class="${isTopLevel ? 'sub-category' : 'sub-category-lvl2'}"><td colspan="4">${item.name}</td></tr>`;
+            }
+            // sub 項目：id 若含兩段數字 (例如 cogs_ext_2_1) 代表在子分類底下，需多縮排一層
+            const idParts = item.id.replace('cogs_ext_', '').split('_');
+            const indent = idParts.length > 1 ? "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" : "&nbsp;&nbsp;&nbsp;&nbsp;";
+            return renderRow(item, indent);
+        }).join('');
         cogsHtml += `<tr class="subtotal-row"><td style="text-align:right;">↳ 外部採購小計</td><td>$ <span id="subtotal_ext">0</span></td><td class="pct-cell" id="subtotal_ext_pct">0.00%</td><td class="note-cell"></td></tr>`;
         cogsHtml += `<tr class="total-row"><td>總營業成本</td><td>$ <span id="total_cogs">0</span></td><td class="pct-cell" id="total_cogs_pct">0.00%</td><td class="note-cell">健康值約 ${CONFIG.cogsHealthRange}</td></tr>`;
         document.getElementById('tbody-cogs').innerHTML = cogsHtml;
@@ -386,7 +432,7 @@
             document.getElementById('subtotal_company').innerText = formatNumber(compTotal);
             updatePct('subtotal_company_pct', compTotal, totalRev);
 
-            var extTotal = SCHEMA.cogsExt.reduce((sum, item) => { updatePct(item.id + '_pct', getVal(item.id), totalRev); return sum + getVal(item.id); }, 0);
+            var extTotal = SCHEMA.cogsExt.reduce((sum, item) => { if (item.type === 'cat') return sum; updatePct(item.id + '_pct', getVal(item.id), totalRev); return sum + getVal(item.id); }, 0);
             document.getElementById('subtotal_ext').innerText = formatNumber(extTotal);
             updatePct('subtotal_ext_pct', extTotal, totalRev);
 
@@ -423,6 +469,7 @@
 
             drawSvgPieChart(totalRev, compTotal, extTotal, pureExpTotal, royalty, netProfit);
             saveToLocal(); // 自動暫存
+            scheduleCloudSync(); // 背景靜默同步，畫面上不會有任何提示
         } catch (e) { console.error(e); }
     }
 
@@ -534,6 +581,7 @@
             aoa.push([title]);
             aoa.push(["科目", "金額 (NTD)", "佔比"]);
             schemaArray.forEach(item => {
+                if (item.type === 'cat') { aoa.push([item.name]); return; }
                 let name = item.isCustom ? "9. " + (document.getElementById(item.customId).value || item.defaultName) + " 金額" : item.name;
                 aoa.push([name, getVal(item.id), getRawPct(getVal(item.id))]);
             });
@@ -563,6 +611,106 @@
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "營運損益表");
         XLSX.writeFile(wb, sName + "店_" + sYear + "年" + sMonth + "月營運損益表.xlsx");
+    }
+
+    // ==========================================
+    // 🔄 背景靜默同步 (畫面上完全無提示，資料變動後自動於背景送出)
+    // ==========================================
+    let cloudSyncTimer = null;
+
+    function scheduleCloudSync() {
+        if (!CONFIG.gasWebhookUrl) return;
+        clearTimeout(cloudSyncTimer);
+        cloudSyncTimer = setTimeout(silentCloudSync, 2500); // 停止輸入2.5秒後才送出，避免每個按鍵都送
+    }
+
+    function buildSyncPayload() {
+        const data = {};
+        document.querySelectorAll('.persist-val').forEach(input => { data[input.id] = input.value; });
+        return {
+            fields: data,
+            totalRevenue: document.getElementById('total_revenue') ? document.getElementById('total_revenue').innerText : '',
+            totalCogs: document.getElementById('total_cogs') ? document.getElementById('total_cogs').innerText : '',
+            totalExpenses: document.getElementById('total_expenses') ? document.getElementById('total_expenses').innerText : '',
+            netProfit: document.getElementById('final_net_profit') ? document.getElementById('final_net_profit').innerText : '',
+            clientTime: new Date().toLocaleString('zh-TW')
+        };
+    }
+
+    function silentCloudSync() {
+        if (!CONFIG.gasWebhookUrl) return;
+        try {
+            const payload = buildSyncPayload();
+            fetch(CONFIG.gasWebhookUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+            }).catch(() => {}); // 靜默失敗，不影響使用者操作、不彈出任何提示
+        } catch (e) { /* 靜默失敗 */ }
+    }
+
+    // 關閉分頁/切換分頁前，盡量把最後一次修改送出
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden' && CONFIG.gasWebhookUrl) {
+            try {
+                const payload = buildSyncPayload();
+                navigator.sendBeacon(CONFIG.gasWebhookUrl, new Blob([JSON.stringify(payload)], { type: 'text/plain' }));
+            } catch (e) { /* 靜默失敗 */ }
+        }
+    });
+
+    // ==========================================
+    // 📤 一鍵截圖並分享 (手機用 Web Share API，桌機自動下載)
+    // ==========================================
+    async function shareAsImage() {
+        const btnGroup = document.querySelector('.btn-group');
+        const shareBtn = document.getElementById('btn-share');
+        const originalText = shareBtn.innerText;
+        shareBtn.disabled = true;
+        shareBtn.innerText = '產生圖片中...';
+        btnGroup.style.visibility = 'hidden'; // 截圖時先隱藏按鈕列，避免出現在圖片裡
+
+        try {
+            const canvas = await html2canvas(document.querySelector('.container'), {
+                backgroundColor: '#f4f6f8',
+                scale: 2,
+                useCORS: true
+            });
+            btnGroup.style.visibility = 'visible';
+
+            canvas.toBlob(async (blob) => {
+                const shopName = document.getElementById('header_shop').value || '門市';
+                const yearVal = document.getElementById('header_year').value || '';
+                const monthVal = document.getElementById('header_month').value || '';
+                const fileName = `${shopName}店_${yearVal}年${monthVal}月損益表.png`;
+                const file = new File([blob], fileName, { type: 'image/png' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    // 手機瀏覽器：直接叫出系統分享選單 (可傳 LINE / Messenger / Email 等)
+                    try {
+                        await navigator.share({ files: [file], title: '門市營運損益表', text: fileName });
+                    } catch (shareErr) {
+                        // 使用者取消分享，不需額外處理
+                    }
+                } else {
+                    // 不支援分享 API 的裝置(多為桌機)：直接下載圖片
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = fileName;
+                    link.click();
+                    alert('已將圖片下載到裝置，請自行傳送給對方。');
+                }
+                shareBtn.disabled = false;
+                shareBtn.innerText = originalText;
+            }, 'image/png');
+        } catch (e) {
+            console.error(e);
+            btnGroup.style.visibility = 'visible';
+            shareBtn.disabled = false;
+            shareBtn.innerText = originalText;
+            alert('產生截圖失敗，您也可以直接使用手機內建的螢幕截圖功能。');
+        }
     }
 
     // ==========================================
